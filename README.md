@@ -267,25 +267,25 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Start([Alice initiates BB84 Key Exchange]) --> Step1[Alice generates random bits 0,1 & bases +, x]
-    Step1 --> Step2[Alice encodes photons in chosen polarization bases]
-    Step2 --> EveCheck{Is Eve Eavesdropping?}
+    Start(["Alice initiates BB84 Key Exchange"]) --> Step1["Alice generates random bits 0,1 and bases +, x"]
+    Step1 --> Step2["Alice encodes photons in chosen polarization bases"]
+    Step2 --> EveCheck{"Is Eve Eavesdropping?"}
 
-    EveCheck -->|Yes - Intercept Attack| EveIntercept[Eve intercepts photons, measures in random bases +, x]
-    EveIntercept --> EveResend[Eve collapses quantum state & resends modified photons]
-    EveResend --> BobMeasure[Bob measures incoming photons in random bases +, x]
+    EveCheck -->|"Yes: Intercept Attack"| EveIntercept["Eve intercepts photons, measures in random bases"]
+    EveIntercept --> EveResend["Eve collapses state and resends modified photons"]
+    EveResend --> BobMeasure["Bob measures incoming photons in random bases +, x"]
 
-    EveCheck -->|No - Legitimate Channel| BobMeasure
+    EveCheck -->|"No: Legitimate Channel"| BobMeasure
 
-    BobMeasure --> Sift[Alice & Bob publicly compare bases over classical channel]
-    Sift --> SiftKey[Sifted Key formed where bases matched ~50% of bits]
-    SiftKey --> SampleTest[Alice & Bob sacrifice test sample to calculate QBER]
+    BobMeasure --> Sift["Alice and Bob publicly compare bases"]
+    Sift --> SiftKey["Sifted Key formed where bases matched"]
+    SiftKey --> SampleTest["Alice and Bob sacrifice test sample to calculate QBER"]
     
-    SampleTest --> QBERCalc{Is QBER < 11%?}
-    QBERCalc -->|Yes: QBER ≈ 0%| SecureKey[Channel Secure: Establish Final Secret Key]
-    QBERCalc -->|No: QBER ≈ 25%| AbortChannel[Eavesdropper Detected! ABORT KEY EXCHANGE]
+    SampleTest --> QBERCalc{"Is QBER below 11%?"}
+    QBERCalc -->|"Yes: Low Error Rate"| SecureKey["Channel Secure: Establish Final Secret Key"]
+    QBERCalc -->|"No: High Error Rate"| AbortChannel["Eavesdropper Detected: ABORT KEY EXCHANGE"]
 
-    SecureKey --> End([Transmission Completed])
+    SecureKey --> End(["Transmission Completed"])
     AbortChannel --> End
 ```
 
@@ -296,15 +296,15 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph ClassicalLoop["Classical Host (SciPy COBYLA)"]
-        Init["Init Parameters (γ, β)"]
-        Cost["Calculate Expected Cut <H_C>"]
+        Init["Init Parameters (gamma, beta)"]
+        Cost["Calculate Expected Cut"]
         Optimizer["COBYLA Optimizer Update"]
     end
 
     subgraph QuantumProcessor["Quantum Simulator (Qiskit Aer)"]
-        StatePrep["|0>^(⊗n) -> H^(⊗n) Superposition"]
-        ProblemUnitary["Apply U(C, γ) = exp(-i γ C)"]
-        MixerUnitary["Apply U(B, β) = exp(-i β B)"]
+        StatePrep["Superposition State Preparation"]
+        ProblemUnitary["Apply Problem Unitary U(C, gamma)"]
+        MixerUnitary["Apply Mixer Unitary U(B, beta)"]
         Measure["Measure Bitstring Counts"]
     end
 
@@ -314,8 +314,8 @@ flowchart LR
     MixerUnitary --> Measure
     Measure --> Cost
     Cost --> Optimizer
-    Optimizer -->|Updated (γ, β)| StatePrep
-    Optimizer -->|Converged| OptimalCut["Output Best Partition Bitstring"]
+    Optimizer -->|"Updated Parameters"| StatePrep
+    Optimizer -->|"Converged"| OptimalCut["Output Best Partition Bitstring"]
 ```
 
 ---
