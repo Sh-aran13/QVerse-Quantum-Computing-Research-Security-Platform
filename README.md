@@ -14,7 +14,7 @@
 ---
 
 **Developed as a B.Tech Final-Year Major Project**  
-*Academic Year 2025–2026*
+*Academic Year 2026–2027*
 
 </div>
 
