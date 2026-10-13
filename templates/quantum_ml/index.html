@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Hybrid Quantum Machine Learning Laboratory{% endblock %}
+
+{% block content %}
+<div class="circuit-studio-grid" style="grid-template-columns: 280px 1fr 340px;">
+    <!-- Left: Training Setup -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Model Hyperparameters</h2>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Classification Architecture:</label>
+            <select class="form-select">
+                <option value="vqc">2-Qubit Variational Quantum Classifier (VQC)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Training Dataset Size (Samples):</label>
+            <input type="number" id="qmlSamples" class="form-input" value="30" min="20" max="60">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Hybrid Training Epochs:</label>
+            <input type="number" id="qmlEpochs" class="form-input" value="8" min="4" max="20">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Shots per Evaluation:</label>
+            <input type="number" id="qmlShots" class="form-input" value="512" min="100" max="2048">
+        </div>
+
+        <button id="runQMLBtn" class="btn btn-teal" style="width: 100%; margin-top: auto;">Train Hybrid Quantum Model</button>
+    </div>
+
+    <!-- Center: Model Evaluation & Classical Baseline Comparison -->
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Quantum vs Classical Model Telemetry</h2>
+                    <span style="font-size: var(--font-size-xs); color: var(--color-text-dim);">Held-out test set accuracy, precision, recall & F1 evaluation</span>
+                </div>
+                <span id="qmlStatusBadge" class="status-badge status-pending">Awaiting Training</span>
+            </div>
+
+            <!-- Two-Column Cards: Quantum VQC vs Scikit-Learn -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="background: var(--color-surface-dark); padding: 1rem; border-radius: var(--radius-md); border-top: 3px solid var(--color-accent-blue);">
+                    <div style="font-size: var(--font-size-xs); font-weight: 700; color: var(--color-accent-blue); text-transform: uppercase;">Variational Quantum Classifier</div>
+                    <div class="inspector-meta-row" style="margin-top: 0.5rem;">
+                        <span class="inspector-meta-label">Test Accuracy:</span>
+                        <span class="inspector-meta-val" id="qAcc" style="color: var(--color-accent-blue); font-size: var(--font-size-base);">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Precision:</span>
+                        <span class="inspector-meta-val" id="qPrec">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Recall:</span>
+                        <span class="inspector-meta-val" id="qRecall">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">F1-Score:</span>
+                        <span class="inspector-meta-val" id="qF1">-</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--color-surface-dark); padding: 1rem; border-radius: var(--radius-md); border-top: 3px solid var(--color-status-warning);">
+                    <div style="font-size: var(--font-size-xs); font-weight: 700; color: var(--color-status-warning); text-transform: uppercase;">Classical Logistic Regression</div>
+                    <div class="inspector-meta-row" style="margin-top: 0.5rem;">
+                        <span class="inspector-meta-label">Test Accuracy:</span>
+                        <span class="inspector-meta-val" id="cAcc" style="color: var(--color-status-warning); font-size: var(--font-size-base);">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Precision:</span>
+                        <span class="inspector-meta-val" id="cPrec">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Recall:</span>
+                        <span class="inspector-meta-val" id="cRecall">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">F1-Score:</span>
+                        <span class="inspector-meta-val" id="cF1">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Loss History Output -->
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <div style="font-size: var(--font-size-xs); font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.5rem;">Quantum Hybrid Optimizer Loss Trajectory:</div>
+                <div id="qmlLossTrajectoryContainer" style="flex: 1; min-height: 140px; padding: 0.75rem; background: var(--color-surface-dark); border-radius: var(--radius-md); font-family: var(--font-family-mono); font-size: 11px; overflow-y: auto;">
+                    <span style="color: var(--color-text-dim);">Loss trajectory will record across hybrid variational training iterations</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Scientific Methodology Panel -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Scientific Principles</h2>
+        </div>
+
+        <div style="font-size: var(--font-size-xs); line-height: 1.6; color: var(--color-text-muted);">
+            <h4 style="color: var(--color-text-main); margin-bottom: 0.25rem;">Ansatz & Feature Map</h4>
+            <p>Classical features $x \in \mathbb{R}^2$ are encoded via unitary rotations $U_\Phi(x) = RY(x_1) \otimes RY(x_2)$.</p>
+            <p style="margin-top: 0.5rem;">The entangling ansatz $W(\theta)$ transforms the state across Hilbert space, measuring the expectation $\langle Z \rangle$ on the second qubit as decision boundary.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch } from "{% static 'js/api.js' %}";
+
+document.getElementById('runQMLBtn').addEventListener('click', async () => {
+    const badge = document.getElementById('qmlStatusBadge');
+    badge.textContent = 'Training VQC...';
+    badge.className = 'status-badge status-running';
+
+    const n_samples = parseInt(document.getElementById('qmlSamples').value) || 30;
+    const max_epochs = parseInt(document.getElementById('qmlEpochs').value) || 8;
+    const shots = parseInt(document.getElementById('qmlShots').value) || 512;
+
+    try {
+        const res = await apiFetch('/api/v1/quantum-ml/run/', {
+            method: 'POST',
+            body: JSON.stringify({ n_samples, max_epochs, shots })
+        });
+
+        badge.textContent = 'Training Completed';
+        badge.className = 'status-badge status-succeeded';
+
+        // Update Quantum fields
+        const q = res.quantum_classifier;
+        document.getElementById('qAcc').textContent = `${(q.accuracy * 100).toFixed(1)}%`;
+        document.getElementById('qPrec').textContent = `${(q.precision * 100).toFixed(1)}%`;
+        document.getElementById('qRecall').textContent = `${(q.recall * 100).toFixed(1)}%`;
+        document.getElementById('qF1').textContent = `${(q.f1 * 100).toFixed(1)}%`;
+
+        // Update Classical fields
+        const c = res.classical_baseline;
+        document.getElementById('cAcc').textContent = `${(c.accuracy * 100).toFixed(1)}%`;
+        document.getElementById('cPrec').textContent = `${(c.precision * 100).toFixed(1)}%`;
+        document.getElementById('cRecall').textContent = `${(c.recall * 100).toFixed(1)}%`;
+        document.getElementById('cF1').textContent = `${(c.f1 * 100).toFixed(1)}%`;
+
+        // Trajectory
+        const traj = document.getElementById('qmlLossTrajectoryContainer');
+        traj.innerHTML = q.loss_history.map(item => `Epoch ${item.epoch}: Loss = ${item.loss}`).join('<br>');
+    } catch (err) {
+        badge.textContent = 'Training Failed';
+        badge.className = 'status-badge status-failed';
+        alert('QML Error: ' + (err.error?.message || JSON.stringify(err)));
+    }
+});
+</script>
+{% endblock %}

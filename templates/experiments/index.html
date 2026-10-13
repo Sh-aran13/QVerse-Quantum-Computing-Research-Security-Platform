@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Experiment Manager & Reproducibility Repository{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">All Persisted Quantum Experiments</h2>
+            <span style="font-size: var(--font-size-xs); color: var(--color-text-dim);">Central provenance log tracking configurations, seeds, shots, and reproducibility records</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <select id="filterModuleSelect" class="form-select" style="font-size: var(--font-size-xs); padding: 0.3rem 0.6rem;">
+                <option value="">All Domains</option>
+                <option value="CIRCUIT_STUDIO">Circuit Studio</option>
+                <option value="ALGORITHMS">Algorithms Lab</option>
+                <option value="BENCHMARKING">Benchmarking</option>
+                <option value="OPTIMIZATION">Optimization Lab</option>
+                <option value="QUANTUM_ML">Quantum ML</option>
+            </select>
+            <button id="refreshExpsBtn" class="btn btn-secondary btn-sm">Refresh</button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Experiment Name</th>
+                    <th>Module</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions & Exports</th>
+                </tr>
+            </thead>
+            <tbody id="experimentsTableBody">
+                <tr>
+                    <td colspan="6" style="text-align: center; color: var(--color-text-dim);">Loading experiments...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch } from "{% static 'js/api.js' %}";
+
+async function loadExperiments() {
+    const module = document.getElementById('filterModuleSelect').value;
+    const url = module ? `/api/v1/experiments/?module=${module}` : '/api/v1/experiments/';
+    const tbody = document.getElementById('experimentsTableBody');
+
+    try {
+        const experiments = await apiFetch(url);
+        if (!experiments || experiments.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--color-text-dim); padding: 2rem;">No experiments found. Run a circuit, algorithm, or benchmark to record telemetry.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = '';
+        experiments.forEach(exp => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${exp.name}</strong></td>
+                <td><span style="font-size: 11px;">${exp.module}</span></td>
+                <td><code style="font-size: 11px;">${exp.experiment_type}</code></td>
+                <td><span class="status-badge status-${exp.status.toLowerCase()}">${exp.status}</span></td>
+                <td style="font-size: 11px;">${new Date(exp.created_at).toLocaleString()}</td>
+                <td>
+                    <div style="display: flex; gap: 0.35rem;">
+                        <a href="/api/v1/experiments/${exp.id}/export/json/" class="btn btn-secondary btn-sm" download>JSON</a>
+                        <a href="/api/v1/experiments/${exp.id}/export/csv/" class="btn btn-secondary btn-sm" download>CSV</a>
+                        <a href="/api/v1/experiments/${exp.id}/export/report/" class="btn btn-teal btn-sm" target="_blank">Report</a>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color: var(--color-status-error); text-align: center;">Error loading experiments: ${err.message || 'Check connection'}</td></tr>`;
+    }
+}
+
+document.getElementById('refreshExpsBtn').addEventListener('click', loadExperiments);
+document.getElementById('filterModuleSelect').addEventListener('change', loadExperiments);
+window.addEventListener('DOMContentLoaded', loadExperiments);
+</script>
+{% endblock %}

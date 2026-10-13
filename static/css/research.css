@@ -1,0 +1,50 @@
+/* Academic Research Mode Overrides */
+body[data-workspace="research"] {
+    font-size: 0.9375rem;
+}
+
+body[data-workspace="research"] .stat-card {
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+    border-left: 3px solid var(--color-accent-blue);
+}
+
+body[data-workspace="research"] .card {
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+}
+
+body[data-workspace="research"] .data-table th,
+body[data-workspace="research"] .data-table td {
+    padding: 0.5rem 0.75rem;
+    font-size: var(--font-size-xs);
+}
+
+.research-methodology-panel {
+    display: none;
+    background: rgba(79, 140, 255, 0.05);
+    border: 1px solid rgba(79, 140, 255, 0.2);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+body[data-workspace="research"] .research-methodology-panel {
+    display: block;
+}
+
+.methodology-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-accent-blue);
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.methodology-text {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}

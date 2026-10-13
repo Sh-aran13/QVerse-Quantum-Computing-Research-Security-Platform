@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Quantum Security & Cryptography Laboratory{% endblock %}
+
+{% block content %}
+<div class="circuit-studio-grid" style="grid-template-columns: 280px 1fr 340px;">
+    <!-- Left: Security Module Controls -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Security Lab Domain</h2>
+        </div>
+
+        <div class="gate-palette">
+            <button class="palette-btn active" id="tabBB84Btn"><span>BB84 QKD Protocol</span></button>
+            <button class="palette-btn" id="tabPQCBtn"><span>PQC Migration Audit</span></button>
+        </div>
+
+        <!-- BB84 Controls -->
+        <div id="bb84ControlsBox" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            <div class="form-group">
+                <label class="form-label">Total Transmitted Photons (Bits):</label>
+                <input type="number" id="bb84Bits" class="form-input" value="64" min="16" max="256">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Eve Eavesdropper Mode:</label>
+                <select id="bb84EveSelect" class="form-select">
+                    <option value="false">Legitimate Channel (No Eavesdropper)</option>
+                    <option value="true">Intercept-Resend Active (Eve Attacking)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">QBER Test Sample Ratio:</label>
+                <input type="number" id="bb84SampleRatio" class="form-input" value="0.5" step="0.1" min="0.2" max="0.8">
+            </div>
+
+            <button id="runBB84Btn" class="btn btn-teal" style="width: 100%; margin-top: auto;">Simulate BB84 Exchange</button>
+        </div>
+
+        <!-- PQC Controls -->
+        <div id="pqcControlsBox" style="margin-top: 1.5rem; display: none; flex-direction: column; gap: 0.75rem; flex: 1;">
+            <div style="font-size: var(--font-size-xs); color: var(--color-text-muted);">
+                Analyze enterprise cryptographic dependencies against Shor & Grover algorithms according to NIST FIPS 203/204 standards.
+            </div>
+            <button id="runPQCAuditBtn" class="btn btn-primary" style="width: 100%; margin-top: auto;">Audit Default Inventory</button>
+        </div>
+    </div>
+
+    <!-- Center: Interactive Simulation Dashboard & Telemetry -->
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- BB84 Panel View -->
+        <div id="bb84DisplayCard" class="card" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">BB84 Quantum Key Distribution Telemetry</h2>
+                    <span style="font-size: var(--font-size-xs); color: var(--color-text-dim);">Photon polarization, basis reconciliation & intrusion detection</span>
+                </div>
+                <span id="bb84StatusBadge" class="status-badge status-pending">Awaiting Simulation</span>
+            </div>
+
+            <!-- Metric Overview -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem;">
+                <div style="background: var(--color-surface-dark); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                    <div style="font-size: 10px; color: var(--color-text-dim); text-transform: uppercase;">Sifted Key</div>
+                    <div style="font-size: var(--font-size-lg); font-weight: 700;" id="siftedLenVal">-</div>
+                </div>
+                <div style="background: var(--color-surface-dark); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                    <div style="font-size: 10px; color: var(--color-text-dim); text-transform: uppercase;">Sample Tested</div>
+                    <div style="font-size: var(--font-size-lg); font-weight: 700;" id="sampleSizeVal">-</div>
+                </div>
+                <div style="background: var(--color-surface-dark); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                    <div style="font-size: 10px; color: var(--color-text-dim); text-transform: uppercase;">Observed QBER</div>
+                    <div style="font-size: var(--font-size-lg); font-weight: 700;" id="qberVal">-</div>
+                </div>
+                <div style="background: var(--color-surface-dark); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                    <div style="font-size: 10px; color: var(--color-text-dim); text-transform: uppercase;">Final Secret Key</div>
+                    <div style="font-size: var(--font-size-lg); font-weight: 700; color: var(--color-accent-teal);" id="finalKeyVal">-</div>
+                </div>
+            </div>
+
+            <!-- Photon Transmission Bit Inspection Table -->
+            <div style="flex: 1; overflow-y: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Alice Bit</th>
+                            <th>Alice Basis</th>
+                            <th>Bob Basis</th>
+                            <th>Bob Bit</th>
+                            <th>Basis Match</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bb84TableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--color-text-dim);">Execute simulation to inspect photon basis measurements</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PQC Panel View -->
+        <div id="pqcDisplayCard" class="card" style="flex: 1; display: none; flex-direction: column;">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Post-Quantum Cryptography (PQC) Audit</h2>
+                    <span style="font-size: var(--font-size-xs); color: var(--color-text-dim);">NIST FIPS 203/204 Compliance & Harvest-Now-Decrypt-Later (HNDL) Risk</span>
+                </div>
+                <span id="pqcStatusBadge" class="status-badge status-pending">Ready</span>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>System Asset</th>
+                            <th>Current Algorithm</th>
+                            <th>Quantum Status</th>
+                            <th>Risk Level</th>
+                            <th>HNDL</th>
+                            <th>NIST Migration Target</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pqcTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--color-text-dim);">Click "Audit Default Inventory" to inspect cryptographic assets</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Cryptographic Insights & Explanations -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Security Methodology</h2>
+        </div>
+
+        <div style="font-size: var(--font-size-xs); line-height: 1.6; color: var(--color-text-muted);" id="secMethodologyText">
+            <h4 style="color: var(--color-text-main); margin-bottom: 0.25rem;">BB84 Intrusion Detection</h4>
+            <p>Quantum mechanics dictates that measuring an unknown quantum state irreversibly collapses its wavefunction (No-Cloning Theorem).</p>
+            <p style="margin-top: 0.5rem;">When Eve performs an intercept-resend attack, she guesses the wrong basis 50% of the time, causing a theoretical <strong>25% Quantum Bit Error Rate (QBER)</strong> in the sifted key.</p>
+            <p style="margin-top: 0.5rem;">If the observed QBER exceeds the security threshold (11%), Alice and Bob detect the eavesdropper and immediately abort key distribution.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch } from "{% static 'js/api.js' %}";
+
+// Tab Switching
+document.getElementById('tabBB84Btn').addEventListener('click', () => {
+    document.getElementById('tabBB84Btn').classList.add('active');
+    document.getElementById('tabPQCBtn').classList.remove('active');
+    document.getElementById('bb84ControlsBox').style.display = 'flex';
+    document.getElementById('pqcControlsBox').style.display = 'none';
+    document.getElementById('bb84DisplayCard').style.display = 'flex';
+    document.getElementById('pqcDisplayCard').style.display = 'none';
+});
+
+document.getElementById('tabPQCBtn').addEventListener('click', () => {
+    document.getElementById('tabPQCBtn').classList.add('active');
+    document.getElementById('tabBB84Btn').classList.remove('active');
+    document.getElementById('pqcControlsBox').style.display = 'flex';
+    document.getElementById('bb84ControlsBox').style.display = 'none';
+    document.getElementById('pqcDisplayCard').style.display = 'flex';
+    document.getElementById('bb84DisplayCard').style.display = 'none';
+});
+
+// Run BB84 Simulation
+document.getElementById('runBB84Btn').addEventListener('click', async () => {
+    const badge = document.getElementById('bb84StatusBadge');
+    badge.textContent = 'Simulating Photons...';
+    badge.className = 'status-badge status-running';
+
+    const num_bits = parseInt(document.getElementById('bb84Bits').value) || 64;
+    const eve_present = document.getElementById('bb84EveSelect').value === 'true';
+    const sample_ratio = parseFloat(document.getElementById('bb84SampleRatio').value) || 0.5;
+
+    try {
+        const res = await apiFetch('/api/v1/security/bb84/run/', {
+            method: 'POST',
+            body: JSON.stringify({ num_bits, eve_present, sample_ratio })
+        });
+
+        if (res.is_secure) {
+            badge.textContent = 'SECURE (Key Established)';
+            badge.className = 'status-badge status-succeeded';
+        } else {
+            badge.textContent = 'ABORTED (Eve Detected)';
+            badge.className = 'status-badge status-failed';
+        }
+
+        document.getElementById('siftedLenVal').textContent = `${res.sifted_key_length} bits`;
+        document.getElementById('sampleSizeVal').textContent = `${res.sample_size} bits`;
+        document.getElementById('qberVal').textContent = `${res.qber_percentage}%`;
+        document.getElementById('finalKeyVal').textContent = `${res.final_key_length} bits`;
+
+        // Render transmission table
+        const tbody = document.getElementById('bb84TableBody');
+        tbody.innerHTML = '';
+        res.sample_transmission.forEach(t => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${t.index}</td>
+                <td><strong>${t.alice_bit}</strong></td>
+                <td><code>${t.alice_basis}</code></td>
+                <td><code>${t.bob_basis}</code></td>
+                <td><strong>${t.bob_bit}</strong></td>
+                <td><span style="color: ${t.matched_basis ? 'var(--color-status-success)' : 'var(--color-text-dim)'};">${t.matched_basis ? 'MATCH' : 'DISCARD'}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        badge.textContent = 'Simulation Error';
+        badge.className = 'status-badge status-failed';
+        alert('BB84 Error: ' + (err.error?.message || JSON.stringify(err)));
+    }
+});
+
+// Run PQC Audit
+document.getElementById('runPQCAuditBtn').addEventListener('click', async () => {
+    const badge = document.getElementById('pqcStatusBadge');
+    badge.textContent = 'Auditing Cryptographic Assets...';
+    badge.className = 'status-badge status-running';
+
+    try {
+        const res = await apiFetch('/api/v1/security/pqc/assess/', {
+            method: 'POST',
+            body: JSON.stringify({})
+        });
+
+        badge.textContent = res.overall_posture;
+        badge.className = res.critical_count > 0 ? 'status-badge status-failed' : 'status-badge status-succeeded';
+
+        const tbody = document.getElementById('pqcTableBody');
+        tbody.innerHTML = '';
+        res.assessed_assets.forEach(a => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${a.system_name}</strong></td>
+                <td><code>${a.algorithm}</code></td>
+                <td style="font-size: 11px;">${a.quantum_status}</td>
+                <td><span class="status-badge ${a.risk_level === 'Critical' ? 'status-failed' : (a.risk_level === 'High' ? 'status-failed' : 'status-succeeded')}">${a.risk_level}</span></td>
+                <td><span style="color: ${a.hndl_risk ? 'var(--color-status-error)' : 'var(--color-text-dim)'};">${a.hndl_risk ? 'YES (VULNERABLE)' : 'No'}</span></td>
+                <td><span style="color: var(--color-accent-teal); font-weight: 600;">${a.migration_target}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        badge.textContent = 'Audit Failed';
+        badge.className = 'status-badge status-failed';
+        alert('PQC Error: ' + (err.error?.message || JSON.stringify(err)));
+    }
+});
+</script>
+{% endblock %}

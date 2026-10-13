@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Quantum Circuit Optimizer & Transpiler{% endblock %}
+
+{% block content %}
+<div class="circuit-studio-grid" style="grid-template-columns: 280px 1fr 340px;">
+    <!-- Left: Optimization Controls -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Transpiler Config</h2>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Optimization Level (0-3):</label>
+            <select id="optLevelSelect" class="form-select">
+                <option value="0">Level 0: No optimization (Direct mapping)</option>
+                <option value="1">Level 1: Light (Adjacent gate cancellation)</option>
+                <option value="2" selected>Level 2: Medium (Commutative reduction)</option>
+                <option value="3">Level 3: Heavy (Unitary synthesis & 2Q opt)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Target Hardware Basis Gates:</label>
+            <select id="optBasisSelect" class="form-select">
+                <option value="ibm">IBM Superconducting [id, rz, sx, x, cx]</option>
+                <option value="universal">Universal Single-Qubit + CNOT [u1, u2, u3, cx]</option>
+                <option value="cz_arch">Trapped Ion / CZ Arch [rx, ry, rz, cz]</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Sample Optimizable Circuit:</label>
+            <select id="sampleCircuitSelect" class="form-select">
+                <option value="redundant_hadamards">Redundant Adjacent H-H & X-X Gates</option>
+                <option value="bell_state">Standard Bell State (H + CNOT)</option>
+                <option value="rotations">Adjacent Commuting RZ Rotations</option>
+            </select>
+        </div>
+
+        <button id="runOptimizerBtn" class="btn btn-primary" style="width: 100%; margin-top: auto;">Transpile & Optimize Circuit</button>
+    </div>
+
+    <!-- Center: Before & After Metric Cards & Circuit Diff -->
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Circuit Transpilation Analysis</h2>
+                    <span style="font-size: var(--font-size-xs); color: var(--color-text-dim);">Gate reduction and depth compression across Qiskit compiler passes</span>
+                </div>
+                <span id="optStatusBadge" class="status-badge status-pending">Ready</span>
+            </div>
+
+            <!-- Before vs After Cards -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="background: var(--color-surface-dark); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem;">
+                    <div style="font-size: var(--font-size-xs); font-weight: 700; color: var(--color-text-muted); text-transform: uppercase;">Original Circuit</div>
+                    <div class="inspector-meta-row" style="margin-top: 0.5rem;">
+                        <span class="inspector-meta-label">Total Gates:</span>
+                        <span class="inspector-meta-val" id="origGateCount">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Circuit Depth:</span>
+                        <span class="inspector-meta-val" id="origDepth">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Qubits:</span>
+                        <span class="inspector-meta-val" id="origQubits">-</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--color-surface-dark); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; border-top: 3px solid var(--color-accent-teal);">
+                    <div style="font-size: var(--font-size-xs); font-weight: 700; color: var(--color-accent-teal); text-transform: uppercase;">Optimized Circuit</div>
+                    <div class="inspector-meta-row" style="margin-top: 0.5rem;">
+                        <span class="inspector-meta-label">Total Gates:</span>
+                        <span class="inspector-meta-val" id="optGateCount" style="color: var(--color-accent-teal);">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Circuit Depth:</span>
+                        <span class="inspector-meta-val" id="optDepth" style="color: var(--color-accent-teal);">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Depth Compression:</span>
+                        <span class="inspector-meta-val" id="optCompressionPct" style="color: var(--color-status-success);">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OpenQASM Before / After Diff View -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex: 1;">
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: var(--font-size-xs); font-weight: 600; color: var(--color-text-dim); margin-bottom: 0.25rem;">Original QASM:</span>
+                    <textarea id="origQasmView" class="form-textarea" style="flex: 1; min-height: 140px; font-family: var(--font-family-mono); font-size: 10px; resize: none;" readonly></textarea>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: var(--font-size-xs); font-weight: 600; color: var(--color-accent-teal); margin-bottom: 0.25rem;">Transpiled & Optimized QASM:</span>
+                    <textarea id="optQasmView" class="form-textarea" style="flex: 1; min-height: 140px; font-family: var(--font-family-mono); font-size: 10px; resize: none;" readonly></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Compiler Pipeline Breakdown -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Compiler Insights</h2>
+        </div>
+
+        <div style="font-size: var(--font-size-xs); line-height: 1.6; color: var(--color-text-muted);">
+            <h4 style="color: var(--color-text-main); margin-bottom: 0.25rem;">Transpilation Passes Applied</h4>
+            <ul style="padding-left: 1.2rem; margin-bottom: 1rem;">
+                <li><strong>Unroll3qOrMore:</strong> Decomposes arbitrary multi-qubit unitaries.</li>
+                <li><strong>CXCancellation:</strong> Collapses redundant back-to-back CX gates.</li>
+                <li><strong>Optimize1qGatesDecomposition:</strong> Merges commuting single-qubit rotations.</li>
+                <li><strong>BasisTranslator:</strong> Synthesizes gates into targeted hardware physical basis.</li>
+            </ul>
+
+            <h4 style="color: var(--color-text-main); margin-bottom: 0.25rem;">Transpiler Wall-Clock Time</h4>
+            <div class="inspector-meta-row">
+                <span class="inspector-meta-label">Pass Execution:</span>
+                <span class="inspector-meta-val" id="optTimeMs">-</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch } from "{% static 'js/api.js' %}";
+
+const sampleCircuits = {
+    redundant_hadamards: {
+        schema_version: "1.0",
+        num_qubits: 2,
+        num_classical_bits: 2,
+        operations: [
+            { gate: "h", targets: [0], params: [], cbits: [] },
+            { gate: "h", targets: [0], params: [], cbits: [] }, // H*H = I (Cancels)
+            { gate: "x", targets: [1], params: [], cbits: [] },
+            { gate: "x", targets: [1], params: [], cbits: [] }, // X*X = I (Cancels)
+            { gate: "cx", targets: [0, 1], params: [], cbits: [] },
+            { gate: "cx", targets: [0, 1], params: [], cbits: [] }, // CX*CX = I (Cancels)
+            { gate: "h", targets: [0], params: [], cbits: [] },
+            { gate: "measure", targets: [0], params: [], cbits: [0] }
+        ]
+    },
+    bell_state: {
+        schema_version: "1.0",
+        num_qubits: 2,
+        num_classical_bits: 2,
+        operations: [
+            { gate: "h", targets: [0], params: [], cbits: [] },
+            { gate: "cx", targets: [0, 1], params: [], cbits: [] },
+            { gate: "measure", targets: [0], params: [], cbits: [0] },
+            { gate: "measure", targets: [1], params: [], cbits: [1] }
+        ]
+    },
+    rotations: {
+        schema_version: "1.0",
+        num_qubits: 1,
+        num_classical_bits: 1,
+        operations: [
+            { gate: "rz", targets: [0], params: [0.785], cbits: [] },
+            { gate: "rz", targets: [0], params: [0.785], cbits: [] },
+            { gate: "rz", targets: [0], params: [1.57], cbits: [] },
+            { gate: "measure", targets: [0], params: [], cbits: [0] }
+        ]
+    }
+};
+
+const basisGateSets = {
+    ibm: ['id', 'rz', 'sx', 'x', 'cx'],
+    universal: ['u1', 'u2', 'u3', 'cx'],
+    cz_arch: ['rx', 'ry', 'rz', 'cz']
+};
+
+document.getElementById('runOptimizerBtn').addEventListener('click', async () => {
+    const badge = document.getElementById('optStatusBadge');
+    badge.textContent = 'Transpiling...';
+    badge.className = 'status-badge status-running';
+
+    const selectedSample = document.getElementById('sampleCircuitSelect').value;
+    const def = sampleCircuits[selectedSample];
+    const optLevel = parseInt(document.getElementById('optLevelSelect').value);
+    const basisKey = document.getElementById('optBasisSelect').value;
+    const basisGates = basisGateSets[basisKey];
+
+    try {
+        const res = await apiFetch('/api/v1/circuit-optimizer/optimize/', {
+            method: 'POST',
+            body: JSON.stringify({
+                circuit_definition: def,
+                optimization_level: optLevel,
+                basis_gates: basisGates
+            })
+        });
+
+        badge.textContent = 'Optimization Complete';
+        badge.className = 'status-badge status-succeeded';
+
+        // Original metrics
+        document.getElementById('origGateCount').textContent = res.original_metrics.gate_count;
+        document.getElementById('origDepth').textContent = res.original_metrics.circuit_depth;
+        document.getElementById('origQubits').textContent = res.original_metrics.qubit_count;
+        document.getElementById('origQasmView').value = res.original_qasm;
+
+        // Optimized metrics
+        document.getElementById('optGateCount').textContent = res.optimized_metrics.gate_count;
+        document.getElementById('optDepth').textContent = res.optimized_metrics.circuit_depth;
+        document.getElementById('optCompressionPct').textContent = `${res.comparison.depth_reduction_pct}%`;
+        document.getElementById('optQasmView').value = res.optimized_qasm;
+        document.getElementById('optTimeMs').textContent = `${res.comparison.optimization_time_ms} ms`;
+    } catch (err) {
+        badge.textContent = 'Optimization Failed';
+        badge.className = 'status-badge status-failed';
+        alert('Transpilation error: ' + (err.error?.message || JSON.stringify(err)));
+    }
+});
+</script>
+{% endblock %}

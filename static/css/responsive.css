@@ -1,0 +1,24 @@
+/* Responsive Layout */
+@media (max-width: 1024px) {
+    .dashboard-sections-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-sidebar {
+        position: fixed;
+        left: -100%;
+        top: 0;
+        bottom: 0;
+        transition: left var(--transition-normal);
+    }
+
+    .app-sidebar.open {
+        left: 0;
+    }
+
+    .header-left .menu-toggle {
+        display: block;
+    }
+}

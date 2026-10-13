@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Quantum Circuit Studio{% endblock %}
+
+{% block content %}
+<div class="circuit-studio-grid">
+    <!-- Left: Gate Palette -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Gate Palette</h2>
+        </div>
+        <div class="gate-palette">
+            <button class="palette-btn active" data-gate="h"><span>Hadamard</span> <span>H</span></button>
+            <button class="palette-btn" data-gate="x"><span>Pauli-X</span> <span>X</span></button>
+            <button class="palette-btn" data-gate="y"><span>Pauli-Y</span> <span>Y</span></button>
+            <button class="palette-btn" data-gate="z"><span>Pauli-Z</span> <span>Z</span></button>
+            <button class="palette-btn" data-gate="s"><span>Phase S</span> <span>S</span></button>
+            <button class="palette-btn" data-gate="t"><span>Phase T</span> <span>T</span></button>
+            <button class="palette-btn" data-gate="cx"><span>CNOT</span> <span>CX</span></button>
+            <button class="palette-btn" data-gate="measure"><span>Measure</span> <span>M</span></button>
+        </div>
+
+        <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--color-border);">
+            <div class="form-group">
+                <label class="form-label">Add to Qubit:</label>
+                <select id="targetQubitSelect" class="form-select">
+                    <option value="0">q[0]</option>
+                    <option value="1">q[1]</option>
+                </select>
+            </div>
+            <div id="cnotTargetGroup" class="form-group" style="display: none;">
+                <label class="form-label">Target Qubit (CX):</label>
+                <select id="cxTargetSelect" class="form-select">
+                    <option value="1">q[1]</option>
+                </select>
+            </div>
+            <button id="applyGateBtn" class="btn btn-primary" style="width: 100%;">Insert Gate</button>
+        </div>
+    </div>
+
+    <!-- Center: Interactive Circuit Canvas & Execution Results -->
+    <div style="display: flex; flex-direction: column;">
+        <div class="card circuit-canvas-card" style="flex: 1;">
+            <div class="card-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <input type="text" id="circuitNameInput" class="form-input" value="Bell State Experiment" style="font-weight: 600; width: 220px;">
+                    <span id="circuitDimBadge" class="status-badge status-pending">2 Qubits</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="clearCircuitBtn" class="btn btn-secondary btn-sm">Clear</button>
+                    <button id="saveCircuitBtn" class="btn btn-secondary btn-sm">Save Circuit</button>
+                    <button id="simulateBtn" class="btn btn-teal btn-sm">Run Simulation</button>
+                </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="circuit-canvas-area" id="circuitCanvasContainer"></div>
+        </div>
+
+        <!-- Simulation Histogram Area -->
+        <div class="circuit-results-area">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h3 style="font-size: var(--font-size-sm); font-weight: 600;">Measurement Histogram & State Probabilities</h3>
+                <span id="simExecutionBadge" class="status-badge status-pending" style="font-size: 10px;">Awaiting Execution</span>
+            </div>
+            <div id="histogramContainer" style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                <span style="color: var(--color-text-dim); font-size: var(--font-size-xs);">Click "Run Simulation" to execute on Qiskit Aer</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Circuit Properties & Inspector -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Properties & QASM</h2>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Number of Qubits:</label>
+            <input type="number" id="qubitsCountInput" class="form-input" min="1" max="16" value="2">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Measurement Shots:</label>
+            <input type="number" id="shotsInput" class="form-input" min="1" max="10000" value="1024">
+        </div>
+
+        <div style="margin-top: 0.5rem; margin-bottom: 1rem;">
+            <div class="inspector-meta-row">
+                <span class="inspector-meta-label">Circuit Depth:</span>
+                <span id="metaDepth" class="inspector-meta-val">-</span>
+            </div>
+            <div class="inspector-meta-row">
+                <span class="inspector-meta-label">Gate Count:</span>
+                <span id="metaGateCount" class="inspector-meta-val">-</span>
+            </div>
+            <div class="inspector-meta-row">
+                <span class="inspector-meta-label">Simulator Backend:</span>
+                <span id="metaBackend" class="inspector-meta-val">Qiskit Aer</span>
+            </div>
+            <div class="inspector-meta-row">
+                <span class="inspector-meta-label">Execution Time:</span>
+                <span id="metaTime" class="inspector-meta-val">-</span>
+            </div>
+        </div>
+
+        <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+            <label class="form-label">OpenQASM Representation:</label>
+            <textarea id="qasmOutput" class="form-textarea" style="flex: 1; font-family: var(--font-family-mono); font-size: 11px; resize: none;" readonly>// OpenQASM will generate after validation</textarea>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch } from "{% static 'js/api.js' %}";
+import { CircuitEditor } from "{% static 'js/circuit-editor.js' %}";
+import { renderHistogram } from "{% static 'js/charts.js' %}";
+
+let activeGate = 'h';
+let savedCircuitId = null;
+
+// Initialize Editor with default Bell State
+const initialOps = [
+    { gate: "h", targets: [0], params: [], cbits: [] },
+    { gate: "cx", targets: [0, 1], params: [], cbits: [] },
+    { gate: "measure", targets: [0], params: [], cbits: [0] },
+    { gate: "measure", targets: [1], params: [], cbits: [1] }
+];
+
+const editor = new CircuitEditor('circuitCanvasContainer', {
+    numQubits: 2,
+    numClbits: 2,
+    operations: initialOps,
+    onCircuitChange: updateCircuitInspector
+});
+
+function updateQubitSelects(numQubits) {
+    const sel = document.getElementById('targetQubitSelect');
+    const cxSel = document.getElementById('cxTargetSelect');
+    sel.innerHTML = '';
+    cxSel.innerHTML = '';
+    for (let i = 0; i < numQubits; i++) {
+        sel.add(new Option(`q[${i}]`, i));
+        cxSel.add(new Option(`q[${i}]`, i));
+    }
+    if (cxSel.options.length > 1) cxSel.selectedIndex = 1;
+}
+
+function updateCircuitInspector(def) {
+    document.getElementById('circuitDimBadge').textContent = `${def.num_qubits} Qubits`;
+    document.getElementById('metaGateCount').textContent = def.operations.length;
+}
+
+// Gate Palette selection
+document.querySelectorAll('.palette-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeGate = btn.getAttribute('data-gate');
+        document.getElementById('cnotTargetGroup').style.display = activeGate === 'cx' ? 'flex' : 'none';
+    });
+});
+
+// Qubit count change
+document.getElementById('qubitsCountInput').addEventListener('change', (e) => {
+    const n = parseInt(e.target.value) || 2;
+    editor.setNumQubits(n);
+    updateQubitSelects(n);
+});
+
+// Insert gate button
+document.getElementById('applyGateBtn').addEventListener('click', () => {
+    const targetQ = parseInt(document.getElementById('targetQubitSelect').value);
+    if (activeGate === 'cx') {
+        const cxTgt = parseInt(document.getElementById('cxTargetSelect').value);
+        if (targetQ === cxTgt) {
+            alert('Control and Target qubits must be distinct.');
+            return;
+        }
+        editor.addGate('cx', [targetQ, cxTgt]);
+    } else if (activeGate === 'measure') {
+        editor.addGate('measure', [targetQ], [], [targetQ]);
+    } else {
+        editor.addGate(activeGate, [targetQ]);
+    }
+});
+
+// Clear
+document.getElementById('clearCircuitBtn').addEventListener('click', () => editor.clear());
+
+// Save Circuit
+document.getElementById('saveCircuitBtn').addEventListener('click', async () => {
+    const name = document.getElementById('circuitNameInput').value.trim() || 'Untitled Circuit';
+    const def = editor.getDefinition();
+    try {
+        let res;
+        if (savedCircuitId) {
+            res = await apiFetch(`/api/v1/circuits/${savedCircuitId}/`, {
+                method: 'PATCH',
+                body: JSON.stringify({ name, circuit_definition: def, num_qubits: def.num_qubits })
+            });
+        } else {
+            res = await apiFetch('/api/v1/circuits/', {
+                method: 'POST',
+                body: JSON.stringify({ name, circuit_definition: def, num_qubits: def.num_qubits })
+            });
+            savedCircuitId = res.id;
+        }
+        if (res.circuit_qasm) document.getElementById('qasmOutput').value = res.circuit_qasm;
+        alert('Circuit successfully saved to database.');
+    } catch (err) {
+        alert('Failed to save circuit: ' + (err.error?.message || 'Check validation'));
+    }
+});
+
+// Run Simulation on Qiskit Aer
+document.getElementById('simulateBtn').addEventListener('click', async () => {
+    const badge = document.getElementById('simExecutionBadge');
+    badge.textContent = 'Simulating on Aer...';
+    badge.className = 'status-badge status-running';
+
+    const def = editor.getDefinition();
+    const shots = parseInt(document.getElementById('shotsInput').value) || 1024;
+    const name = document.getElementById('circuitNameInput').value.trim();
+
+    try {
+        // Save first or ensure ID
+        if (!savedCircuitId) {
+            const saveRes = await apiFetch('/api/v1/circuits/', {
+                method: 'POST',
+                body: JSON.stringify({ name, circuit_definition: def, num_qubits: def.num_qubits })
+            });
+            savedCircuitId = saveRes.id;
+        }
+
+        const simRes = await apiFetch(`/api/v1/circuits/${savedCircuitId}/simulate/`, {
+            method: 'POST',
+            body: JSON.stringify({ shots, experiment_name: `Sim: ${name}`, include_statevector: true })
+        });
+
+        badge.textContent = `Completed (${shots} shots)`;
+        badge.className = 'status-badge status-succeeded';
+
+        document.getElementById('metaDepth').textContent = simRes.metrics.circuit_depth;
+        document.getElementById('metaGateCount').textContent = simRes.metrics.gate_count;
+        document.getElementById('metaTime').textContent = `${simRes.metrics.execution_time_ms} ms`;
+        if (simRes.qasm) document.getElementById('qasmOutput').value = simRes.qasm;
+
+        // Render authentic measurement histogram
+        renderHistogram('histogramContainer', simRes.counts, simRes.probabilities);
+    } catch (err) {
+        badge.textContent = 'Simulation Failed';
+        badge.className = 'status-badge status-failed';
+        alert('Simulator error: ' + (err.error?.message || JSON.stringify(err)));
+    }
+});
+
+updateQubitSelects(2);
+updateCircuitInspector(editor.getDefinition());
+</script>
+{% endblock %}

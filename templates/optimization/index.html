@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Quantum Optimization Laboratory (QAOA Max-Cut){% endblock %}
+
+{% block content %}
+<div class="circuit-studio-grid" style="grid-template-columns: 280px 1fr 340px;">
+    <!-- Left: Problem Setup -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Graph Problem Setup</h2>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Optimization Problem:</label>
+            <select class="form-select">
+                <option value="maxcut">Max-Cut Graph Partitioning (Ising Hamiltonian)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Number of Graph Nodes (Qubits):</label>
+            <input type="number" id="qaoaNodes" class="form-input" value="4" min="3" max="8">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">QAOA Depth (p layers):</label>
+            <input type="number" id="qaoaDepth" class="form-input" value="1" min="1" max="4">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Optimizer Iterations (COBYLA):</label>
+            <input type="number" id="qaoaEvals" class="form-input" value="12" min="5" max="30">
+        </div>
+
+        <button id="runQAOABtn" class="btn btn-teal" style="width: 100%; margin-top: auto;">Execute QAOA Optimizer</button>
+    </div>
+
+    <!-- Center: Results, Graph Partition, and Convergence -->
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">QAOA Optimization Telemetry</h2>
+                    <span style="font-size: var(--font-size-xs); color: var(--color-text-dim);">Variational quantum expectation minimization vs exact classical baseline</span>
+                </div>
+                <span id="qaoaStatusBadge" class="status-badge status-pending">Awaiting Run</span>
+            </div>
+
+            <!-- Two-Column Cards: QAOA vs Exact Classical -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="background: var(--color-surface-dark); padding: 1rem; border-radius: var(--radius-md); border-top: 3px solid var(--color-accent-blue);">
+                    <div style="font-size: var(--font-size-xs); font-weight: 700; color: var(--color-accent-blue); text-transform: uppercase;">QAOA Quantum Solution</div>
+                    <div class="inspector-meta-row" style="margin-top: 0.5rem;">
+                        <span class="inspector-meta-label">Best Partition Bitstring:</span>
+                        <span class="inspector-meta-val" id="qaoaPartitionVal">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Measured Cut Value:</span>
+                        <span class="inspector-meta-val" id="qaoaCutVal" style="color: var(--color-accent-blue); font-size: var(--font-size-base);">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Approximation Ratio:</span>
+                        <span class="inspector-meta-val" id="qaoaRatioVal">-</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--color-surface-dark); padding: 1rem; border-radius: var(--radius-md); border-top: 3px solid var(--color-status-warning);">
+                    <div style="font-size: var(--font-size-xs); font-weight: 700; color: var(--color-status-warning); text-transform: uppercase;">Exact Classical Optimum</div>
+                    <div class="inspector-meta-row" style="margin-top: 0.5rem;">
+                        <span class="inspector-meta-label">Optimal Partition:</span>
+                        <span class="inspector-meta-val" id="exactPartitionVal">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">True Maximum Cut:</span>
+                        <span class="inspector-meta-val" id="exactCutVal" style="color: var(--color-status-warning); font-size: var(--font-size-base);">-</span>
+                    </div>
+                    <div class="inspector-meta-row">
+                        <span class="inspector-meta-label">Exhaustive Evaluations:</span>
+                        <span class="inspector-meta-val" id="exactEvalsVal">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Measured Candidate Distribution -->
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <div style="font-size: var(--font-size-xs); font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.5rem;">Optimal State Sample Counts (Aer Simulator):</div>
+                <div id="qaoaHistogramContainer" style="flex: 1; min-height: 180px; display: flex; align-items: center; justify-content: center; background: var(--color-surface-dark); border-radius: var(--radius-md);">
+                    <span style="color: var(--color-text-dim); font-size: var(--font-size-xs);">Execute QAOA to observe optimal cut bitstrings</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Theoretical Principles -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card-header">
+            <h2 class="card-title">Mathematical Principles</h2>
+        </div>
+
+        <div style="font-size: var(--font-size-xs); line-height: 1.6; color: var(--color-text-muted);">
+            <h4 style="color: var(--color-text-main); margin-bottom: 0.25rem;">Max-Cut Ising Hamiltonian</h4>
+            <p>Max-Cut maps to the Ising model with cost Hamiltonian:</p>
+            <p style="margin-top: 0.5rem; font-family: var(--font-family-mono); background: var(--color-surface-dark); padding: 0.4rem; border-radius: 4px;">H_C = 0.5 · ∑_{(u,v)} (I - Z_u Z_v)</p>
+            <p style="margin-top: 0.5rem;">The mixer Hamiltonian $H_B = \sum_i X_i$ drives quantum transitions across partitions. QAOA tunes angles $(\gamma, \beta)$ to maximize the expectation value $\langle \psi(\gamma, \beta) | H_C | \psi(\gamma, \beta) \rangle$.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+import { apiFetch } from "{% static 'js/api.js' %}";
+import { renderHistogram } from "{% static 'js/charts.js' %}";
+
+document.getElementById('runQAOABtn').addEventListener('click', async () => {
+    const badge = document.getElementById('qaoaStatusBadge');
+    badge.textContent = 'Optimizing QAOA...';
+    badge.className = 'status-badge status-running';
+
+    const num_nodes = parseInt(document.getElementById('qaoaNodes').value) || 4;
+    const p_layers = parseInt(document.getElementById('qaoaDepth').value) || 1;
+    const max_evals = parseInt(document.getElementById('qaoaEvals').value) || 12;
+
+    try {
+        const res = await apiFetch('/api/v1/optimization/qaoa/run/', {
+            method: 'POST',
+            body: JSON.stringify({ num_nodes, p_layers, max_evals })
+        });
+
+        badge.textContent = 'Optimization Succeeded';
+        badge.className = 'status-badge status-succeeded';
+
+        // Update QAOA fields
+        document.getElementById('qaoaPartitionVal').textContent = `|${res.qaoa_result.best_measured_partition}⟩`;
+        document.getElementById('qaoaCutVal').textContent = `${res.qaoa_result.best_measured_cut} Edges`;
+        document.getElementById('qaoaRatioVal').textContent = `${(res.qaoa_result.approximation_ratio * 100).toFixed(1)}%`;
+
+        // Update Exact Classical
+        document.getElementById('exactPartitionVal').textContent = `|${res.classical_baseline.best_partition}⟩`;
+        document.getElementById('exactCutVal').textContent = `${res.classical_baseline.best_cut} Edges`;
+        document.getElementById('exactEvalsVal').textContent = `${res.classical_baseline.total_evaluations} Evaluations`;
+
+        // Render histogram
+        const counts = res.qaoa_result.counts;
+        const total = Object.values(counts).reduce((a, b) => a + b, 0);
+        renderHistogram('qaoaHistogramContainer', counts, Object.fromEntries(Object.entries(counts).map(([k, v]) => [k, v / total])));
+    } catch (err) {
+        badge.textContent = 'Optimization Failed';
+        badge.className = 'status-badge status-failed';
+        alert('QAOA Error: ' + (err.error?.message || JSON.stringify(err)));
+    }
+});
+</script>
+{% endblock %}

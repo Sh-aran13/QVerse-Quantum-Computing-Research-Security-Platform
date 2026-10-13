@@ -1,0 +1,77 @@
+:root {
+    /* Color Palette Design Tokens */
+    --color-bg-primary: #0B1220;
+    --color-surface-dark: #111B2E;
+    --color-surface-card: #18233C;
+    --color-surface-card-hover: #1E2D4C;
+    --color-border: #233354;
+    --color-border-subtle: #192640;
+    
+    --color-text-main: #FFFFFF;
+    --color-text-muted: #94A3B8;
+    --color-text-dim: #64748B;
+    
+    /* Scientific Accent Tokens */
+    --color-accent-blue: #4F8CFF;
+    --color-accent-blue-hover: #3B7BF6;
+    --color-accent-teal: #27C4A8;
+    --color-accent-teal-hover: #1EB096;
+    
+    /* Semantic Status Tokens */
+    --color-status-success: #27C4A8;
+    --color-status-warning: #F5B544;
+    --color-status-error: #E45D6B;
+    --color-status-pending: #94A3B8;
+    --color-status-running: #4F8CFF;
+
+    /* Typography & Hierarchy */
+    --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+
+    /* Layout & Spacing */
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 72px;
+    --header-height: 64px;
+    
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 9999px;
+
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] {
+    --color-bg-primary: #F5F7FB;
+    --color-surface-dark: #FFFFFF;
+    --color-surface-card: #FFFFFF;
+    --color-surface-card-hover: #F1F4F9;
+    --color-border: #E2E8F0;
+    --color-border-subtle: #EDF2F7;
+    
+    --color-text-main: #0B1220;
+    --color-text-muted: #64748B;
+    --color-text-dim: #94A3B8;
+    
+    --color-accent-blue: #2563EB;
+    --color-accent-blue-hover: #1D4ED8;
+    --color-accent-teal: #0D9488;
+    --color-accent-teal-hover: #0F766E;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
